@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/template
+    username: root
+    password: cronaldo7
+  data:
+    redis:
+      port: 6379
+
