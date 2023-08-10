@@ -108,7 +108,12 @@ public class SecurityConfiguration {
     //退出登录成功处理器
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response,
                                 Authentication authentication) throws IOException, ServletException {
-
+        response.setContentType("application/json");
+        response.setCharacterEncoding("utf-8");
+        String authorization = request.getHeader("Authorization");
+        //如果将token拉入黑名单成功，则退出登录成功
+        if(jwtUtil.inValidateJwt(authorization))response.getWriter().write(RestBean.success().asJsonString());
+        else response.getWriter().write(RestBean.failure(400, "退出登录失败").asJsonString());
     }
 
     //JWT校验不通过时触发

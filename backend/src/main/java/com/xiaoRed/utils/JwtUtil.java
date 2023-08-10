@@ -25,6 +25,9 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class JwtUtil {
 
+    @Resource
+    StringRedisTemplate template;
+
     /**
      * 根据UserDetails生成对应的Jwt令牌
      * @return 令牌
@@ -63,6 +66,7 @@ public class JwtUtil {
         JWTVerifier jwtVerifier = JWT.require(algorithm).build();
         try{//如果验证后发现jwt有问题，需要抛异常且返回空
             DecodedJWT decodedJWT = jwtVerifier.verify(token);//对JWT令牌进行验证，看看是否被修改
+            if (this.isInValidateJwt(decodedJWT.getId()))return null;//还要再判断一下令牌是否有效
             Date expireAt = decodedJWT.getExpiresAt();//拿到令牌的失效时间
             return new Date().after(expireAt) ? null : decodedJWT;//如果令牌现在已经失效，返回空；否则返回令牌
         }catch(JWTVerificationException e){//这是运行时异常不会显式地抛出，需要手动捕获
@@ -95,6 +99,51 @@ public class JwtUtil {
                 .password("*******")//createJWT方法在生成jwt时没有设置password负载，这里随便写一个
                 .authorities(claims.get("authorities").toString())
                 .build();
+    }
+
+    /**
+     * 判断jwt令牌是否无效（是否被列入Redis黑名单）：如果jwt在黑名单中，则无效（用uuid在redis里查）
+     * @param uuid 令牌ID
+     * @return true表示jwt令牌无效，false表示jwt令牌有效
+     */
+   public boolean isInValidateJwt(String uuid){
+       return Boolean.TRUE.equals(template.hasKey(JwtConstant.JWT_BLACK_LIST + uuid));
+   }
+
+    /**
+     * 手动失效jwt令牌
+     * @param authorization Authorization请求头中携带的内容
+     * @return 是否设置成功
+     */
+    public boolean inValidateJwt(String authorization) {
+        String token = this.convertToken(authorization);
+        if(token == null) return false;
+        Algorithm algorithm = Algorithm.HMAC256(JwtConstant.JWT_SECRET);
+        JWTVerifier jwtVerifier = JWT.require(algorithm).build();
+        try{//如果验证后发现jwt有问题，需要抛异常且返回空
+            DecodedJWT decodedJWT = jwtVerifier.verify(token);//对JWT令牌进行验证，看看是否被修改
+            String id = decodedJWT.getId();
+            return deleteToken(id, decodedJWT.getExpiresAt());
+        }catch(JWTVerificationException e){//这是运行时异常不会显式地抛出，需要手动捕获
+            return false;
+        }
+    }
+
+    /**
+     * 将Token列入Redis黑名单中
+     * @param uuid 令牌ID
+     * @param time 过期时间
+     * @return 删除成功返回true，反之返回false
+     */
+    public boolean deleteToken(String uuid, Date time){
+        if(this.isInValidateJwt(uuid))return false;
+        Date now = new Date();
+        //计算剩余有效时间还有多少，有可能已过期，直接减会得到负数，可以用max函数指定小于0就默认为0
+        long expire = Math.max(time.getTime() - now.getTime(), 0);
+        //将token存入黑名单
+        // key就是黑名单前缀+uuid；value没啥好存的，给个空字符串；设置在redis的过期时间，单位是毫秒
+        template.opsForValue().set(JwtConstant.JWT_BLACK_LIST + uuid, "", expire, TimeUnit.MILLISECONDS);
+        return true;
     }
 
 }
