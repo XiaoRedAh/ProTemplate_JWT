@@ -3,6 +3,7 @@ package com.xiaoRed.config;
 import com.xiaoRed.entity.RestBean;
 import com.xiaoRed.entity.dto.Account;
 import com.xiaoRed.entity.vo.response.AuthorizeVo;
+import com.xiaoRed.filter.JwtAuthorizeFilter;
 import com.xiaoRed.service.AccountService;
 import com.xiaoRed.utils.JwtUtil;
 import jakarta.annotation.Resource;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,6 +22,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.io.IOException;
 
@@ -28,12 +31,14 @@ import java.io.IOException;
  */
 @Configuration
 public class SecurityConfiguration {
-
     @Resource
     JwtUtil jwtUtil;
 
     @Resource
     AccountService accountService;
+
+    @Resource
+    JwtAuthorizeFilter jwtAuthorizeFilter;
 
     //创建一个BCryptPasswordEncoder注入容器
     @Bean
@@ -43,25 +48,33 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http
-                .authorizeHttpRequests(conf ->conf
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .anyRequest().authenticated())
-                .formLogin(conf -> conf
-                        .loginProcessingUrl("/api/auth/login")
-                        .successHandler(this::onAuthenticationSuccess)
-                        .failureHandler(this::onAuthenticationFailure))
-                .logout(conf -> conf
-                        .logoutUrl("/api/auth/logout")
-                        .logoutSuccessHandler(this::onLogoutSuccess))
-                .csrf(AbstractHttpConfigurer::disable)
-                //采用JWT方案，不用session了
-                .sessionManagement(conf -> conf
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .build();
+       return http
+               .authorizeHttpRequests(conf ->conf
+                       .requestMatchers("/api/auth/**").permitAll()
+                       .anyRequest().authenticated())
+               .formLogin(conf -> conf
+                       .loginProcessingUrl("/api/auth/login")
+                       .successHandler(this::onAuthenticationSuccess)
+                       .failureHandler(this::onAuthenticationFailure))
+               .logout(conf -> conf
+                       .logoutUrl("/api/auth/logout")
+                       .logoutSuccessHandler(this::onLogoutSuccess))
+               //配置异常处理
+               .exceptionHandling(conf -> conf
+                       //JWT校验不通过时触发
+                       .authenticationEntryPoint(this::onUnAuthorized)
+                       //JWT校验通过，但访问某资源没有对应权限时触发
+                       .accessDeniedHandler(this::onAccessDeny) )
+               .csrf(AbstractHttpConfigurer::disable)
+               //采用JWT方案，不用session了
+               .sessionManagement(conf -> conf
+                       .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+               //把JWT校验过滤器添加在UsernamePasswordAuthenticationFilter之前
+               .addFilterBefore(jwtAuthorizeFilter, UsernamePasswordAuthenticationFilter.class)
+               .build();
     }
 
-    //认证成功处理器
+    //登录成功处理器
     private void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                          Authentication authentication) throws IOException, ServletException {
         response.setContentType("application/json");
@@ -84,7 +97,7 @@ public class SecurityConfiguration {
         response.getWriter().write(RestBean.success(authorizeVo).asJsonString());
     }
 
-    //认证失败处理器
+    //登录失败处理器
     private void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                                          AuthenticationException exception) throws IOException, ServletException {
         response.setContentType("application/json");
@@ -96,5 +109,21 @@ public class SecurityConfiguration {
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response,
                                 Authentication authentication) throws IOException, ServletException {
 
+    }
+
+    //JWT校验不通过时触发
+    public void onUnAuthorized(HttpServletRequest request, HttpServletResponse response,
+                               AuthenticationException authException) throws IOException, ServletException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("utf-8");
+        response.getWriter().write(RestBean.unauthorized(authException.getMessage()).asJsonString());
+    }
+
+    //JWT校验通过，但访问某资源没有对应权限时触发
+    private void onAccessDeny(HttpServletRequest request, HttpServletResponse response,
+                              AccessDeniedException e) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("utf-8");
+        response.getWriter().write(RestBean.forbidden(e.getMessage()).asJsonString());
     }
 }
