@@ -89,11 +89,11 @@ public class SecurityConfiguration {
          */
         Account account = accountService.findAccountByNameOrEmail(details.getUsername());
         String token = jwtUtil.createJWT(details, account.getId(), account.getUsername());
-        AuthorizeVo authorizeVo = new AuthorizeVo();
-        authorizeVo.setUsername(account.getUsername());
-        authorizeVo.setRole(account.getRole());
-        authorizeVo.setToken(token);
-        authorizeVo.setExpire(jwtUtil.generateExpirationDate());
+        //使用对象转换工具的方法快速将Account对象转换为AuthorizeVo对象
+        AuthorizeVo authorizeVo = account.asViewObject(AuthorizeVo.class, v -> {
+            v.setExpire(jwtUtil.generateExpirationDate());
+            v.setToken(token);
+        });
         response.getWriter().write(RestBean.success(authorizeVo).asJsonString());
     }
 
