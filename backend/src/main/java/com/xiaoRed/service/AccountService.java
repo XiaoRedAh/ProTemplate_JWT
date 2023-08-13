@@ -12,10 +12,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
  * @since 2023-08-09 10:12:43
  */
 public interface AccountService extends IService<Account>, UserDetailsService {
-    /**
-     * 通过用户名/邮箱找到数据库中对应的用户
-     */
     public Account findAccountByNameOrEmail(String text);
+    String sendEmailVerifyCode(String type, String email, String ip);
 
 }
 
