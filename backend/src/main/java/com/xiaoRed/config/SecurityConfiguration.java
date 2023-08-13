@@ -40,12 +40,6 @@ public class SecurityConfiguration {
     @Resource
     JwtAuthorizeFilter jwtAuthorizeFilter;
 
-    //创建一个BCryptPasswordEncoder注入容器
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
-    }
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
        return http

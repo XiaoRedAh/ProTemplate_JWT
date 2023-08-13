@@ -1,8 +1,10 @@
 package com.xiaoRed.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiaoRed.constants.EmailConstant;
 import com.xiaoRed.entity.dto.Account;
+import com.xiaoRed.entity.vo.request.EmailRegisterVo;
 import com.xiaoRed.mapper.AccountMapper;
 import com.xiaoRed.service.AccountService;
 import com.xiaoRed.utils.FlowUtil;
@@ -12,11 +14,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.util.Date;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +39,9 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     @Resource
     FlowUtil flowUtil;
+
+    @Resource
+    PasswordEncoder encoder;
 
     /**
      *实现loadUserByUsername方法
@@ -100,6 +105,32 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     }
 
     /**
+     * 注册功能：需要检查验证码是否正确以及邮箱、用户名是否已被注册
+     * @param emailRegisterVo 前端注册表单提交的信息封装为vo发过来
+     * @return null表示注册成功，否则返回错误信息
+     */
+    @Override
+    public String registerEmailAccount(EmailRegisterVo emailRegisterVo) {
+        String username = emailRegisterVo.getUsername();
+        String email = emailRegisterVo.getMail();
+        String code = stringRedisTemplate.opsForValue().get(EmailConstant.VERIFY_EMAIL_DATA + email);
+        if (code == null) return "请先获取验证码";
+        if (!code.equals(emailRegisterVo.getCode())) return "验证码错误，请重新输入";
+        if (this.existsAccountByEmail(email)) return "此电子邮箱已被其他用户注册，请更换一个新的电子邮箱";
+        if (this.existsAccountByUsername(username)) return "此用户名已被其他用户注册，请更换一个新的用户名";
+        String password = encoder.encode(emailRegisterVo.getPassword());//密码需要加密后才能存入数据库
+        //id已经设置过自动递增，因此传null即可；角色默认就是user
+        Account account = new Account(null, username, password, email, "user", new Date());
+        if (this.save(account)) {
+            //注册成功后，redis中对应的那个验证码就没用了，手动删除
+            stringRedisTemplate.delete(EmailConstant.VERIFY_EMAIL_DATA + email);
+            return null;
+        }else {
+            return "内部错误，请联系管理员";
+        }
+    }
+
+    /**
      * 针对IP地址进行邮件验证码获取限流
      * @param ip 请求的ip地址
      * @return 是否通过限流验证验证，false表示该ip在限流名单中，true表示尚未被限流
@@ -108,6 +139,25 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         String key = EmailConstant.VERIFY_EMAIL_LIMIT + ip;
         return flowUtil.limitOnceCheck(key, 60);//限流的冷却时间设置为1分钟
     }
+
+    /**
+     * 判断用户名是否已被注册
+     * @param username
+     * @return true表示已被注册
+     */
+    private boolean existsAccountByUsername(String username) {
+        return this.baseMapper.exists(Wrappers.<Account>query().eq("username", username));
+    }
+
+    /**
+     * 判断电子邮箱是否已被注册
+     * @param email
+     * @return true表示已被注册
+     */
+    private boolean existsAccountByEmail(String email) {
+        return this.baseMapper.exists(Wrappers.<Account>query().eq("email", email));
+    }
+
 
 
 }

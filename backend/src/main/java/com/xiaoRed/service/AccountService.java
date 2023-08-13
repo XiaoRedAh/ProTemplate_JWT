@@ -2,6 +2,7 @@ package com.xiaoRed.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.xiaoRed.entity.dto.Account;
+import com.xiaoRed.entity.vo.request.EmailRegisterVo;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
 
@@ -14,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 public interface AccountService extends IService<Account>, UserDetailsService {
     public Account findAccountByNameOrEmail(String text);
     String sendEmailVerifyCode(String type, String email, String ip);
+    String registerEmailAccount(EmailRegisterVo emailRegisterVo);
 
 }
 
