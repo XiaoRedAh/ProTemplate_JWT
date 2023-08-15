@@ -6,7 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.xiaoRed.constants.JwtConstant;
+import com.xiaoRed.constants.Const;
 import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.GrantedAuthority;
@@ -33,7 +33,7 @@ public class JwtUtil {
      * @return 令牌
      */
     public String createJWT(UserDetails details, int id, String username){
-        Algorithm algorithm = Algorithm.HMAC256(JwtConstant.JWT_SECRET);//设置加密算法
+        Algorithm algorithm = Algorithm.HMAC256(Const.JWT_SECRET);//设置加密算法
         return JWT.create()
                 //给jwt设置一个随机的uuid，用于唯一标识，在黑名单中有用
                 .withJWTId(UUID.randomUUID().toString())
@@ -51,7 +51,7 @@ public class JwtUtil {
      */
     public Date generateExpirationDate() {
         //失效时间是当前时间（签发令牌的时间）+(常量类中定义的时间)*3
-        return new Date(System.currentTimeMillis() + 3 * JwtConstant.JWT_EXPIRATION);
+        return new Date(System.currentTimeMillis() + 3 * Const.JWT_EXPIRATION);
     }
 
     /**
@@ -62,7 +62,7 @@ public class JwtUtil {
     public DecodedJWT resolveJwt(String authorization){
         String token = this.convertToken(authorization);
         if(token == null) return null;
-        Algorithm algorithm = Algorithm.HMAC256(JwtConstant.JWT_SECRET);
+        Algorithm algorithm = Algorithm.HMAC256(Const.JWT_SECRET);
         JWTVerifier jwtVerifier = JWT.require(algorithm).build();
         try{//如果验证后发现jwt有问题，需要抛异常且返回空
             DecodedJWT decodedJWT = jwtVerifier.verify(token);//对JWT令牌进行验证，看看是否被修改
@@ -107,7 +107,7 @@ public class JwtUtil {
      * @return true表示jwt令牌无效，false表示jwt令牌有效
      */
    public boolean isInValidateJwt(String uuid){
-       return Boolean.TRUE.equals(template.hasKey(JwtConstant.JWT_BLACK_LIST + uuid));
+       return Boolean.TRUE.equals(template.hasKey(Const.JWT_BLACK_LIST + uuid));
    }
 
     /**
@@ -118,7 +118,7 @@ public class JwtUtil {
     public boolean inValidateJwt(String authorization) {
         String token = this.convertToken(authorization);
         if(token == null) return false;
-        Algorithm algorithm = Algorithm.HMAC256(JwtConstant.JWT_SECRET);
+        Algorithm algorithm = Algorithm.HMAC256(Const.JWT_SECRET);
         JWTVerifier jwtVerifier = JWT.require(algorithm).build();
         try{//如果验证后发现jwt有问题，需要抛异常且返回空
             DecodedJWT decodedJWT = jwtVerifier.verify(token);//对JWT令牌进行验证，看看是否被修改
@@ -142,7 +142,7 @@ public class JwtUtil {
         long expire = Math.max(time.getTime() - now.getTime(), 0);
         //将token存入黑名单
         // key就是黑名单前缀+uuid；value没啥好存的，给个空字符串；设置在redis的过期时间，单位是毫秒
-        template.opsForValue().set(JwtConstant.JWT_BLACK_LIST + uuid, "", expire, TimeUnit.MILLISECONDS);
+        template.opsForValue().set(Const.JWT_BLACK_LIST + uuid, "", expire, TimeUnit.MILLISECONDS);
         return true;
     }
 

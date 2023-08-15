@@ -2,7 +2,7 @@ package com.xiaoRed.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.xiaoRed.constants.EmailConstant;
+import com.xiaoRed.constants.Const;
 import com.xiaoRed.entity.dto.Account;
 import com.xiaoRed.entity.vo.request.ConfirmResetVo;
 import com.xiaoRed.entity.vo.request.EmailRegisterVo;
@@ -101,7 +101,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             //将key前缀:目标邮箱作为key，验证码作为value存入redis，设置3分钟有效
             //后续用户提交填写的验证码，就是和这个redis中的做比较
             stringRedisTemplate.opsForValue()
-                    .set(EmailConstant.VERIFY_EMAIL_DATA + email, String.valueOf(code), 3, TimeUnit.MINUTES);
+                    .set(Const.VERIFY_EMAIL_DATA + email, String.valueOf(code), 3, TimeUnit.MINUTES);
             return null;
         }
     }
@@ -115,7 +115,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     public String registerEmailAccount(EmailRegisterVo emailRegisterVo) {
         String username = emailRegisterVo.getUsername();
         String email = emailRegisterVo.getMail();
-        String code = stringRedisTemplate.opsForValue().get(EmailConstant.VERIFY_EMAIL_DATA + email);
+        String code = stringRedisTemplate.opsForValue().get(Const.VERIFY_EMAIL_DATA + email);
         if (code == null) return "请先获取验证码";
         if (!code.equals(emailRegisterVo.getCode())) return "验证码错误，请重新输入";
         if (this.existsAccountByEmail(email)) return "此电子邮箱已被其他用户注册，请更换一个新的电子邮箱";
@@ -125,7 +125,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         Account account = new Account(null, username, password, email, "user", new Date());
         if (this.save(account)) {
             //注册成功后，redis中对应的那个验证码就没用了，手动删除
-            stringRedisTemplate.delete(EmailConstant.VERIFY_EMAIL_DATA + email);
+            stringRedisTemplate.delete(Const.VERIFY_EMAIL_DATA + email);
             return null;
         }else {
             return "内部错误，请联系管理员";
@@ -140,7 +140,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     @Override
     public String resetCodeConfirm(ConfirmResetVo confirmResetVo) {
         String email = confirmResetVo.getEmail();
-        String code = stringRedisTemplate.opsForValue().get(EmailConstant.VERIFY_EMAIL_DATA + email);
+        String code = stringRedisTemplate.opsForValue().get(Const.VERIFY_EMAIL_DATA + email);
         if (code == null) return "请先获取验证码";
         if (!code.equals(confirmResetVo.getCode())) return "验证码错误，请重新输入";
         return null;
@@ -161,7 +161,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         boolean update = this.update().eq("email", email).set("password", password).update();
         if (update){
             //更新数据库成功了，表明重置成功，对应的验证码没用了，手动从redis删除
-            stringRedisTemplate.delete(EmailConstant.VERIFY_EMAIL_DATA + email);
+            stringRedisTemplate.delete(Const.VERIFY_EMAIL_DATA + email);
         }
         return null;
     }
@@ -172,7 +172,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @return 是否通过限流验证验证，false表示该ip在限流名单中，true表示尚未被限流
      */
     private boolean verifyLimit(String ip) {
-        String key = EmailConstant.VERIFY_EMAIL_LIMIT + ip;
+        String key = Const.VERIFY_EMAIL_LIMIT + ip;
         return flowUtil.limitOnceCheck(key, 60);//限流的冷却时间设置为1分钟
     }
 
