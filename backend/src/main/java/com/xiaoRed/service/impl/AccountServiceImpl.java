@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiaoRed.constants.EmailConstant;
 import com.xiaoRed.entity.dto.Account;
+import com.xiaoRed.entity.vo.request.ConfirmResetVo;
 import com.xiaoRed.entity.vo.request.EmailRegisterVo;
+import com.xiaoRed.entity.vo.request.ResetPawVo;
 import com.xiaoRed.mapper.AccountMapper;
 import com.xiaoRed.service.AccountService;
 import com.xiaoRed.utils.FlowUtil;
@@ -128,6 +130,40 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         }else {
             return "内部错误，请联系管理员";
         }
+    }
+
+    /**
+     * 重置密码第一步：校验验证码，验证码通过才能进行第二步的重置密码
+     * @param  confirmResetVo 将前端请求携带的的邮箱，验证码封装为vo
+     * @return 返回null表示校验通过，否则返回错误信息
+     */
+    @Override
+    public String resetCodeConfirm(ConfirmResetVo confirmResetVo) {
+        String email = confirmResetVo.getEmail();
+        String code = stringRedisTemplate.opsForValue().get(EmailConstant.VERIFY_EMAIL_DATA + email);
+        if (code == null) return "请先获取验证码";
+        if (!code.equals(confirmResetVo.getCode())) return "验证码错误，请重新输入";
+        return null;
+    }
+
+    /**
+     * 重置密码第二步：提交重置的密码，更新数据库。为了防止被人跳过第一步来直接重置，这里依然要对验证码再验证一次
+     * @param resetPawVo 将前端请求携带的新密码以及上一步用到的邮箱，验证码封装为vo
+     * @return 返回null表示重置成功，否则返回错误信息
+     */
+    @Override
+    public String resetPassword(ResetPawVo resetPawVo) {
+        String email = resetPawVo.getEmail();
+        //即使第一步校验过验证码了，但还是要对验证码再校验一次
+        String verify = this.resetCodeConfirm(new ConfirmResetVo(email, resetPawVo.getCode()));
+        if (verify != null) return verify;
+        String password = encoder.encode(resetPawVo.getPassword());//密码加密后才能存储到数据库
+        boolean update = this.update().eq("email", email).set("password", password).update();
+        if (update){
+            //更新数据库成功了，表明重置成功，对应的验证码没用了，手动从redis删除
+            stringRedisTemplate.delete(EmailConstant.VERIFY_EMAIL_DATA + email);
+        }
+        return null;
     }
 
     /**

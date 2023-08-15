@@ -1,7 +1,9 @@
 package com.xiaoRed.controller;
 
 import com.xiaoRed.entity.RestBean;
+import com.xiaoRed.entity.vo.request.ConfirmResetVo;
 import com.xiaoRed.entity.vo.request.EmailRegisterVo;
+import com.xiaoRed.entity.vo.request.ResetPawVo;
 import com.xiaoRed.service.AccountService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,6 +45,28 @@ public class AuthorizeController {
     @PostMapping("/register")
     public RestBean<Void> register(@RequestBody @Validated EmailRegisterVo vo){
         String message = accountService.registerEmailAccount(vo);
+        return message == null ? RestBean.success() : RestBean.failure(400, message);
+    }
+
+    /**
+     * 重置密码第一步：校验验证码，验证码通过才能进行第二步的重置密码
+     * @param vo 将前端请求携带的的邮箱，验证码封装为vo
+     * @return
+     */
+    @PostMapping("/reset-confirm")
+    public RestBean<Void> resetConfirm(@RequestBody @Validated ConfirmResetVo vo){
+        String message = accountService.resetCodeConfirm(vo);
+        return message == null ? RestBean.success() : RestBean.failure(400, message);
+    }
+
+    /**
+     * 重置密码第二步：提交重置的密码，更新数据库。
+     * @param vo 将前端请求携带的新密码以及上一步用到的邮箱，验证码封装为vo
+     * @return
+     */
+    @PostMapping("/reset-password")
+    public RestBean<Void> resetConfirm(@RequestBody @Validated ResetPawVo vo){
+        String message = accountService.resetPassword(vo);
         return message == null ? RestBean.success() : RestBean.failure(400, message);
     }
 }
