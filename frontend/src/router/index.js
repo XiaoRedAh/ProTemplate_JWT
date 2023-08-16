@@ -23,7 +23,12 @@ const router = createRouter({
                     name: 'welcome-reset',
                     component: ()=>import('@/components/welcome/ResetPaw.vue'),
                 }
-            ]
+            ],
+        },
+        {
+            path: '/home',
+            name: 'home',
+            component: ()=>import('@/pages/HomeIndex.vue')
         }
     ]
 

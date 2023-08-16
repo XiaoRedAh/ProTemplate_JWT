@@ -7,6 +7,13 @@ axios.defaults.baseURL = "http://localhost:8080"
 //存储在storage中的名字
 const authItemName = "access_token"
 
+//拿到完整的Authorization请求头
+const accessHeader = ()=>{
+    return{
+        'Authorization': `Bearer ${takeAccessToken()}`
+    }
+}
+
 const defaultFailure = (url, code, message) =>{
     console.warn(`请求地址：${url}，状态码：${code}，错误信息：${message}`)
     ElMessage.warning(message)
@@ -47,7 +54,7 @@ function deleteAccessToken(){
     sessionStorage.removeItem(authItemName)
 }
 
-//自定义Post请求，参数包括：请求url，请求携带的数据，请求头，成功/失败/错误的回调函数
+//自定义内部Post请求，参数包括：请求url，请求携带的数据，请求头，成功/失败/错误的回调函数
 //.then()里的那个data是响应得到的数据，后端定义了统一的格式，这个data包含code，data，message
 function internalPost(url, data, header, success, failure, error = defaultError){
     axios.post(url, data, {headers: header}).then(({data}) =>{
@@ -59,10 +66,10 @@ function internalPost(url, data, header, success, failure, error = defaultError)
     }).catch(err => error(err))
 }
 
-//自定义Get请求，参数包括：请求url，请求头，成功/失败/错误的回调函数
+//自定义内部Get请求，参数包括：请求url，请求头，成功/失败/错误的回调函数
 //.then()里的那个data是响应得到的数据，后端定义了统一的格式，这个data包含code，data，message
 function internalGet(url, header, success, failure, error = defaultError){
-    axios.post(url, {headers: header}).then(({data}) =>{
+    axios.get(url, {headers: header}).then(({data}) =>{
         if (data.code === 200){
             success(data.data)
         }else{
@@ -87,4 +94,23 @@ function login(username, password, remember, success, failure = defaultFailure){
     }, failure)
 }
 
-export {login}
+//封装退出登录请求,注意需要携带Authorization请求头
+function logout(success, failure = defaultFailure){
+    get('/api/auth/logout', ()=>{
+        deleteAccessToken()
+        ElMessage.success("退出登录成功")
+        success()
+    },failure)
+}
+
+//封装暴露出去Post请求。前端所有的post请求都用这个，Authorization请求头携带token
+function post(url, data, success, failure = defaultFailure){
+    internalPost(url, data, accessHeader(), success, failure)
+}
+
+//封装暴露出去的Get请求。前端所有的get请求都用这个，Authorization请求头携带token
+function get(url, success, failure = defaultFailure){
+    internalGet(url, accessHeader(), success, failure)
+}
+
+export {login, logout, get, post}
