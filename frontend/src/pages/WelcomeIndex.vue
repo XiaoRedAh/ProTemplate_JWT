@@ -40,7 +40,7 @@
 .right {
   width: 450px;
   text-align: center;
-  background-color: white;
+  background-color: var(--el-bg-color);
   z-index: 1
 }
 
