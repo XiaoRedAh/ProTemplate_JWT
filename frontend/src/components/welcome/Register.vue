@@ -3,7 +3,7 @@ import {User, Lock, Message, EditPen} from "@element-plus/icons-vue";
 import router from "@/router";
 import {reactive, ref} from "vue";
 import {ElMessage} from "element-plus";
-import {post} from "@/net";
+import {post, get} from "@/net";
 
 const form = reactive({
   email: "",
@@ -36,6 +36,7 @@ const validatePassword = (rule, value, callback) => {
     callback();
   }
 };
+
 //制定校验规则
 const rules = {
   username: [
@@ -54,9 +55,11 @@ const rules = {
     {type: 'email', message: '请输入合法的电子邮箱地址', trigger: ['blur', 'change']}
   ],
   code: [
-    {required: true, message: '请输入获取的验证码', trigger: 'blur'}
+    {required: true, message: '请输入获取的验证码', trigger: 'blur'},
+    {min: 6, max: 6, message: '请输入6位验证码', trigger: ['blur', 'change']}
   ]
 }
+
 //定义对整个表单进行响应的变量
 const formRef = ref()
 //判断邮箱地址是否有效（默认无效），有效才能激发“获取验证码”按钮
@@ -72,11 +75,37 @@ const onValidate = (prop, isValid) => {
 
 //绑定给注册按钮的
 const register = () => {
+  formRef.value.validate((isValid) => {
+    //只有整个el-form表单完整无误，才能向后端发送注册请求
+    if(isValid){
+      post('/api/auth/register', {
+        email: form.email,
+        code: form.code,
+        username: form.username,
+        password: form.password,
+        password_repeat: form.password_repeat
+      },()=>{
+        ElMessage.success("注册成功")
+        router.push('/')//如果后端注册成功，页面切换到登录界面
+      })
+    }else {
+      ElMessage.warning("请完整填写注册表单的内容")
+    }
+  })
 
 }
 
-//向后端发送对应路径的post请求（发送验证码请求），携带1个参数
+//发送邮箱验证码
 const validateEmail = () => {
+  //按钮点击后立即冷却60秒，防止点太快，重复发
+  coldTime.value = 60
+  get(`/api/auth/ask-code?email=${form.email}&type=register`, ()=>{
+    ElMessage.success(`验证码已发送到邮箱: ${form.email}，请注意查收`)
+    setInterval(() => coldTime.value--, 1000)//每一秒，冷却时间减1
+  },undefined, (message)=>{
+    ElMessage.warning(message)
+    coldTime.value = 0 //如果出现了些问题，冷却时间直接清空
+  })
 
 }
 
