@@ -12,7 +12,7 @@ import org.hibernate.validator.constraints.Length;
 public class EmailRegisterVo {
 
     @Email
-    String mail;
+    String email;
     @Length(min = 6, max = 6)
     String code;
     @Pattern(regexp = "^[a-zA-Z0-9\\u4e00-\\u9fa5]+$")//不允许包含特殊字符

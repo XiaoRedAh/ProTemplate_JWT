@@ -114,7 +114,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
     @Override
     public String registerEmailAccount(EmailRegisterVo emailRegisterVo) {
         String username = emailRegisterVo.getUsername();
-        String email = emailRegisterVo.getMail();
+        String email = emailRegisterVo.getEmail();
         String code = stringRedisTemplate.opsForValue().get(Const.VERIFY_EMAIL_DATA + email);
         if (code == null) return "请先获取验证码";
         if (!code.equals(emailRegisterVo.getCode())) return "验证码错误，请重新输入";
