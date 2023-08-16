@@ -33,7 +33,6 @@ public class FlowLimitingFilter extends HttpFilter {
     @Override
     protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
         String ip = request.getRemoteAddr();
-        System.out.println(ip);
         if(!requestCount(ip)){//如果没有通过限流检查，则就拒绝请求，响应错误提示
             this.writeBlockMessage(response);
         }
