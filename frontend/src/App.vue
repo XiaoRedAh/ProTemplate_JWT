@@ -1,10 +1,9 @@
 <script setup>
-import WelcomeIndex from "@/pages/WelcomeIndex.vue"
 
 </script>
 
 <template>
-<WelcomeIndex></WelcomeIndex>
+  <router-view></router-view>
 </template>
 
 <style scoped>

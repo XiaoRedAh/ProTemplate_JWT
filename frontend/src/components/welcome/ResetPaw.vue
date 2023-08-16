@@ -3,7 +3,9 @@
 </script>
 
 <template>
-
+<div>
+  pppppp
+</div>
 </template>
 
 <style scoped>

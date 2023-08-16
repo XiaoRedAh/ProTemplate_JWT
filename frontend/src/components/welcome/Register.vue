@@ -3,7 +3,9 @@
 </script>
 
 <template>
-
+  <div>
+    rrrrr
+  </div>
 </template>
 
 <style scoped>

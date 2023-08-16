@@ -3,30 +3,48 @@
 </script>
 
 <template>
-  <div class="layout">
-    <el-container class="container">
-      <el-aside class="aside">Aside</el-aside>
-      <el-main class="main">Main</el-main>
-    </el-container>
+  <div class="container">
+    <!--左侧壁纸固定-->
+    <div class="left">
+      <img style="width: 100%;height: 100%" fit="cover" src="@/assets/img/login.png"/>
+    </div>
+    <div class="welcome-title">
+      <div style="font-size: 30px;font-weight: bold">欢迎来到xiaoRed的网站</div>
+      <div style="margin-top: 10px">水一段话啦啦啦啦啦啦</div>
+      <div style="margin-top: 5px">再水一段话啦啦啦啦啦啦</div>
+    </div>
+    <!--右侧：根据路由展示登录/注册/重置密码组件-->
+    <div class="right">
+      <router-view></router-view>
+    </div>
+
   </div>
 </template>
 
+
 <style scoped>
-.layout{
-  height: 100vh
+.container {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
 }
 
-.container{
-  height: 100vh
+.left {
+  flex: 1;
 }
 
-.aside{
-  width: 65%;
-  background-color: red
+.right {
+  width: 450px;
+  text-align: center;
+  background-color: white;
+  z-index: 1
 }
 
-.main{
-  background-color: dodgerblue;
-  width: 35%
+.welcome-title {
+  position: absolute;
+  bottom: 30px;
+  left: 30px;
+  color: white;
+  text-shadow: 0 0 10px black;
 }
 </style>
