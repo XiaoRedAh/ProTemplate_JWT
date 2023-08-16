@@ -15,7 +15,11 @@
     </div>
     <!--右侧：根据路由展示登录/注册/重置密码组件-->
     <div class="right">
-      <router-view></router-view>
+      <router-view v-slot="{Component}">
+        <transition name="el-fade-in-linear" mode="out-in">
+          <component :is="Component"></component>
+        </transition>
+      </router-view>
     </div>
 
   </div>
