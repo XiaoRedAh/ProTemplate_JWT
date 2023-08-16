@@ -60,7 +60,7 @@ public class FlowLimitingFilter extends HttpFilter {
         if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(Const.FLOW_LIMIT_COUNTER + ip))){//如果该ip已在redis中
             //redis中对应ip的请求计数自增1，然后拿出来（有可能这一瞬间该键值对刚好失效，因此要有判断null的情况，为null返回0）
             long count = Optional.ofNullable(stringRedisTemplate.opsForValue().increment(Const.FLOW_LIMIT_COUNTER + ip)).orElse(0L);
-            if (count >5){//如果请求计数超过20次，则将ip拉入封禁名单，封禁时间30秒
+            if (count >20){//如果请求计数超过20次，则将ip拉入封禁名单，封禁时间30秒
                 stringRedisTemplate.opsForValue().set(Const.FLOW_LIMIT_BLOCK + ip, "", 30, TimeUnit.SECONDS);
                 return false;
             }
