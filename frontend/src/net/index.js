@@ -113,4 +113,10 @@ function get(url, success, failure = defaultFailure){
     internalGet(url, accessHeader(), success, failure)
 }
 
-export {login, logout, get, post}
+//判断用户是否未授权
+function unauthorized(){
+    //拿token，如果未授权，就会拿到null，返回!null表示用户未授权
+    return !takeAccessToken()
+}
+
+export {login, logout, get, post, unauthorized}
